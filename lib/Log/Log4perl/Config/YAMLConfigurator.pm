@@ -89,14 +89,14 @@ by the L<C<parse()>|/"parse()"> method to process the input.
 # Override buggy Log::Log4perl::Config::BaseConfigurator::new() method.
 sub new
 {
-    my ($class, %options) = @_;
+	my ($class, %options) = @_;
 
-    my $self = bless(\%options, $class);
+	my $self = bless(\%options, $class);
 
-    $self->file($self->{'file'}) if exists($self->{'file'});
-    $self->text($self->{'text'}) if exists($self->{'text'});
+	$self->file($self->{'file'}) if exists($self->{'file'});
+	$self->text($self->{'text'}) if exists($self->{'text'});
 
-    return $self;
+	return $self;
 }
 
 =head2 file()
@@ -120,62 +120,62 @@ constructor.
 
 sub parse
 {
-    my ($self, $text) = @_;
+	my ($self, $text) = @_;
 
-    $self->text($text) if defined($text);
+	$self->text($text) if defined($text);
 
-    die('Config parser has nothing to parse') unless defined($self->{'text'});
+	die('Config parser has nothing to parse') unless defined($self->{'text'});
 
-    return (_rearrange(undef, (_convert(undef, _parse(join('', @{$self->{'text'}}))))[1]))[1];
+	return (_rearrange(undef, (_convert(undef, _parse(join('', @{$self->{'text'}}))))[1]))[1];
 }
 
 sub _convert
 {
-    my ($key, $value, $level) = @_;
+	my ($key, $value, $level) = @_;
 
-    $key   ||= '';
-    $level ||= 0;
+	$key   ||= '';
+	$level ||= 0;
 
-    if (ref($value) eq 'HASH')
-    {
-        my %hash;
+	if (ref($value) eq 'HASH')
+	{
+		my %hash;
 
-        foreach (keys(%{$value}))
-        {
-            my @list = _convert($_, $value->{$_}, $level + 1);
+		foreach (keys(%{$value}))
+		{
+			my @list = _convert($_, $value->{$_}, $level + 1);
 
-            if (exists($hash{$list[0]}))
-            {
-                $hash{$list[0]} = merge($hash{$list[0]}, $list[1]);
-            }
-            else
-            {
-                $hash{$list[0]} = $list[1];
-            }
-        }
-        $value = \%hash;
-    }
-    else
-    {
-        $value = { 'value' => $value, };
-    }
+			if (exists($hash{$list[0]}))
+			{
+				$hash{$list[0]} = merge($hash{$list[0]}, $list[1]);
+			}
+			else
+			{
+				$hash{$list[0]} = $list[1];
+			}
+		}
+		$value = \%hash;
+	}
+	else
+	{
+		$value = { 'value' => $value, };
+	}
 
-    my @path = split(/::|\./, $level ? $key : _unlog4j($key));
+	my @path = split(/::|\./, $level ? $key : _unlog4j($key));
 
-    $key   = shift(@path);
-    $value = { $_ => $value, } foreach (reverse(@path));
+	$key   = shift(@path);
+	$value = { $_ => $value, } foreach (reverse(@path));
 
-    unless ($level)
-    {
-        my @keys = keys(%{$value});
+	unless ($level)
+	{
+		my @keys = keys(%{$value});
 
-        if (scalar(@keys) == 1 && _unlog4j($keys[0] . '.') eq '')
-        {
-            return ($key, $value->{$keys[0]});
-        }
-    }
+		if (scalar(@keys) == 1 && _unlog4j($keys[0] . '.') eq '')
+		{
+			return ($key, $value->{$keys[0]});
+		}
+	}
 
-    return ($key, $value);
+	return ($key, $value);
 }
 
 sub _rearrange

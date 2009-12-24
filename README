@@ -9,8 +9,8 @@ SYNOPSIS
 
     my $config = Log::Log4perl::Config::YAMLConfigurator->new();
 
-	$config->file('log4perl.yaml');
-	$config->parse();
+    $config->file('log4perl.yaml');
+    $config->parse();
 
 DESCRIPTION
 
@@ -20,10 +20,10 @@ INSTALLATION
 
 To install this module, run the following commands:
 
-	perl Build.PL
-	./Build
-	./Build test
-	./Build install
+    perl Build.PL
+    ./Build
+    ./Build test
+    ./Build install
 
 SUPPORT AND DOCUMENTATION
 
