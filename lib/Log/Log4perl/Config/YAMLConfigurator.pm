@@ -3,74 +3,92 @@ package Log::Log4perl::Config::YAMLConfigurator;
 use warnings;
 use strict;
 
+use parent qw(Log::Log4perl::Config::BaseConfigurator);
+
 =head1 NAME
 
-Log::Log4perl::Config::YAMLConfigurator - The great new Log::Log4perl::Config::YAMLConfigurator!
-
-=head1 VERSION
-
-Version 0.01
+Log::Log4perl::Config::YAMLConfigurator - parser of L<Log::Log4perl>
+configuration files based on YAML (L<http://www.yaml.org/spec/>) syntax.
 
 =cut
 
 our $VERSION = '0.01';
 
-
 =head1 SYNOPSIS
-
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
 
     use Log::Log4perl::Config::YAMLConfigurator;
 
-    my $foo = Log::Log4perl::Config::YAMLConfigurator->new();
-    ...
+    my $config = Log::Log4perl::Config::YAMLConfigurator->new();
 
-=head1 EXPORT
+	$config->file('log4perl.yaml');
+	$config->parse();
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+=head1 DESCRIPTION
 
-=head1 SUBROUTINES/METHODS
+=head1 METHODS
 
-=head2 function1
+=head2 new(I<%args>)
 
 =cut
 
-sub function1 {
+# Override buggy Log::Log4perl::Config::BaseConfigurator::new() method.
+sub new
+{
+    my ($class, %options) = @_;
+
+    my $self = bless(\%options, $class);
+
+    $self->file($self->{'file'}) if exists($self->{'file'});
+    $self->text($self->{'text'}) if exists($self->{'text'});
+
+    return $self;
 }
 
-=head2 function2
+=head2 file
+
+=head2 text
 
 =cut
 
-sub function2 {
+# This two methods (file and text) inherited from parent
+# Log::Log4perl::Config::BaseConfigurator module.
+
+=head2 parse
+
+=cut
+
+sub parse
+{
 }
 
 =head1 AUTHOR
 
-Denis Ibaev, C<< <dionys at cpan.org> >>
+Denis Ibaev <dionys@cpan.org>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-log-log4perl-config-yamlconfigurator at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Log-Log4perl-Config-YAMLConfigurator>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
+Please report any bugs or feature requests to mailing list at
+<bug-log-log4perl-config-yamlconfigurator@rt.cpan.org>, or through the web
+interface at L<http://rt.cpan.org/NoAuth/Bugs.html?Queue=Log-Log4perl-Config-YAMLConfigurator>.
+I will be notified, and then you'll automatically be notified of progress on
+your bug as I make changes.
 
-
-
+The latest development version is available from the Git repository at
+L<http://github.com/dionys/log-log4perl-config-yamlconfigurator>
 
 =head1 SUPPORT
 
-You can find documentation for this module with the perldoc command.
+You can find documentation for this module with the perldoc command:
 
     perldoc Log::Log4perl::Config::YAMLConfigurator
-
 
 You can also look for information at:
 
 =over 4
+
+=item * GitHub
+
+L<http://github.com/dionys/log-log4perl-config-yamlconfigurator>
 
 =item * RT: CPAN's request tracker
 
@@ -90,21 +108,13 @@ L<http://search.cpan.org/dist/Log-Log4perl-Config-YAMLConfigurator/>
 
 =back
 
+=head1 COPYRIGHT AND LICENSE
 
-=head1 ACKNOWLEDGEMENTS
+Copyright (c) 2009 Denis Ibaev.
 
-
-=head1 LICENSE AND COPYRIGHT
-
-Copyright 2009 Denis Ibaev.
-
-This program is free software; you can redistribute it and/or modify it
-under the terms of either: the GNU General Public License as published
-by the Free Software Foundation; or the Artistic License.
-
-See http://dev.perl.org/licenses/ for more information.
-
+This library is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
 
 =cut
 
-1; # End of Log::Log4perl::Config::YAMLConfigurator
+1;
