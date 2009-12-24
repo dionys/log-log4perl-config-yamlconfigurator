@@ -1,10 +1,13 @@
-#!perl -T
+#!/usr/bin/perl
 
-use Test::More tests => 1;
+use strict;
+use warnings;
+use lib qw(./lib ../lib);
 
-BEGIN {
-    use_ok( 'Log::Log4perl::Config::YAMLConfigurator' ) || print "Bail out!
-";
+use Test::More (tests => 1);
+
+
+BEGIN
+{
+    use_ok('Log::Log4perl::Config::YAMLConfigurator');
 }
-
-diag( "Testing Log::Log4perl::Config::YAMLConfigurator $Log::Log4perl::Config::YAMLConfigurator::VERSION, Perl $], $^X" );
