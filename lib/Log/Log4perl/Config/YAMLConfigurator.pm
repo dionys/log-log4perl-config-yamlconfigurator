@@ -5,6 +5,9 @@ use strict;
 
 use parent qw(Log::Log4perl::Config::BaseConfigurator);
 
+use Hash::Merge qw(merge);
+use Log::Log4perl::Config ();
+
 =head1 NAME
 
 Log::Log4perl::Config::YAMLConfigurator - parser of L<Log::Log4perl>
@@ -20,14 +23,66 @@ our $VERSION = '0.01';
 
     my $config = Log::Log4perl::Config::YAMLConfigurator->new();
 
-	$config->file('log4perl.yaml');
-	$config->parse();
+    $config->file('log4perl.yaml');
+    $config->parse();
 
 =head1 DESCRIPTION
 
+=cut
+
+{
+	*_unlog4j = \&Log::Log4perl::Config::unlog4j;
+	eval
+	{
+		require YAML::Syck;
+		*_parse = \&YAML::Syck::Load;
+	};
+	if ($@)
+	{
+		require YAML;
+		*_parse = \&YAML::Load;
+	}
+}
+
 =head1 METHODS
 
-=head2 new(I<%args>)
+=head2 C<new()>
+
+This is a constructor for configuration parser. It may takes list of
+parameters.
+
+    my $config = Log::Log4perl::Config::YAMLConfigurator->new(
+        'text' => [
+            'category.Foo::Bar: WARN, Screen',
+            'appender.Screen:',
+            '    class:    Log::Log4perl::Appender::File',
+            '    filename: test.log',
+            '    layout:   Log::Log4perl::Layout::SimpleLayout',
+        ];
+    );
+
+This is a list of support parameters:
+
+=over 4
+
+=item * I<file>
+
+A path to configuration file which the L<C<parse()>|/"parse()"> method later
+parses.
+
+=item * I<text>
+
+A reference to an array of scalars, representing configuration records
+(typically lines of a file) which the L<C<parse()>|/"parse()"> method later
+parses. Also accepts a simple scalar, which it splits at its newlines and
+transforms it into an array.
+
+=back
+
+If either file or text parameters have been specified in the constructor call,
+a later call to the configurator's L<C<text()>|/"text()"> method will return a
+reference to an array of configuration text lines. This will typically be used
+by the L<C<parse()>|/"parse()"> method to process the input.
 
 =cut
 
@@ -44,22 +99,167 @@ sub new
     return $self;
 }
 
-=head2 file
+=head2 file()
 
-=head2 text
+Sets a path to configuration file as C<file> argument of the
+L<C<new()>|/"new()"> constructor.
+
+=head2 C<text()>
+
+Sets a configuration text as C<text> argument of the L<C<new()>|/"new()">
+constructor.
 
 =cut
 
 # This two methods (file and text) inherited from parent
 # Log::Log4perl::Config::BaseConfigurator module.
 
-=head2 parse
+=head2 C<parse()>
 
 =cut
 
 sub parse
 {
+    my ($self, $text) = @_;
+
+    $self->text($text) if defined($text);
+
+    die('Config parser has nothing to parse') unless defined($self->{'text'});
+
+    return (_rearrange(undef, (_convert(undef, _parse(join('', @{$self->{'text'}}))))[1]))[1];
 }
+
+sub _convert
+{
+    my ($key, $value, $level) = @_;
+
+    $key   ||= '';
+    $level ||= 0;
+
+    if (ref($value) eq 'HASH')
+    {
+        my %hash;
+
+        foreach (keys(%{$value}))
+        {
+            my @list = _convert($_, $value->{$_}, $level + 1);
+
+            if (exists($hash{$list[0]}))
+            {
+                $hash{$list[0]} = merge($hash{$list[0]}, $list[1]);
+            }
+            else
+            {
+                $hash{$list[0]} = $list[1];
+            }
+        }
+        $value = \%hash;
+    }
+    else
+    {
+        $value = { 'value' => $value, };
+    }
+
+    my @path = split(/::|\./, $level ? $key : _unlog4j($key));
+
+    $key   = shift(@path);
+    $value = { $_ => $value, } foreach (reverse(@path));
+
+    unless ($level)
+    {
+        my @keys = keys(%{$value});
+
+        if (scalar(@keys) == 1 && _unlog4j($keys[0] . '.') eq '')
+        {
+            return ($key, $value->{$keys[0]});
+        }
+    }
+
+    return ($key, $value);
+}
+
+sub _rearrange
+{
+	my ($key, $value, $level, $root) = @_;
+
+	$key   ||= '';
+	$level ||= 0;
+
+	if (!$level && exists($value->{'logger'}))
+	{
+		if (exists($value->{'category'}))
+		{
+			$value->{'category'} = merge($value->{'category'}, delete($value->{'logger'}));
+		}
+		else
+		{
+			$value->{'category'} = delete($value->{'logger'});
+		}
+	}
+
+	if (ref($value) eq 'HASH' && !($root && $root eq 'data'))
+	{
+		my (%hash, $param);
+
+		if ($root)
+		{
+			if ($key eq 'class' && exists($value->{'value'}) && !ref($value->{'value'}))
+			{
+				return ('value', $value->{'value'});
+			}
+			if (exists($value->{'param'}) && ref($value->{'param'}) eq 'HASH')
+			{
+				$param = delete($value->{'param'});
+			}
+			if ((exists($value->{'priority'}) || exists($value->{'appender'})) && $root eq 'category')
+			{
+				return (
+					$key,
+					{
+						'value' => join(
+							', ',
+							$value->{'priority'}{'value'} || '',
+							ref($value->{'appender'}{'value'}) eq 'ARRAY' ?
+									@{$value->{'appender'}{'value'}} :
+									$value->{'appender'}{'value'} || ''
+						),
+					}
+				);
+			}
+		}
+		foreach (keys(%{$value}))
+		{
+			my @list = _rearrange($_, $value->{$_}, $level + 1, $level ? $root : $_);
+
+			$hash{$list[0]} = $list[1];
+		}
+		if ($param)
+		{
+			$value = merge(\%hash, $param);
+		}
+		else
+		{
+			$value = \%hash;
+		}
+	}
+
+	if (!$level && !exists($value->{'rootLogger'}) &&
+			exists($value->{'category'}) &&
+			exists($value->{'category'}{'root'}))
+	{
+		$value->{'rootLogger'} = delete($value->{'category'}{'root'});
+	}
+
+	return ($key, $value);
+}
+
+=head1 EXAMPLES
+
+=head1 SEE ALSO
+
+L<Log::Log4perl::Config>, L<Log::Log4perl::Config::BaseConfigurator>,
+L<Log::Log4perl::Config::PropertyConfigurator>,
+L<Log::Log4perl::Config::DOMConfigurator>.
 
 =head1 AUTHOR
 
